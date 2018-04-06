@@ -59,6 +59,13 @@
    * be set only for rowTypes, selection of only some columns is
    * not supported
    */
+  /**
+   * @ngdoc property
+   * @propertyOf ui.grid.exporter.constant:uiGridExporterConstants
+   * @name PREVENT_FORMULAS_SINGLE_QUOTE
+   * @description prepend formula cells with a single quote to prevent csv
+   * formula injection vulnerabilities
+   */
   module.constant('uiGridExporterConstants', {
     featureName: 'exporter',
     ALL: 'all',
@@ -66,7 +73,8 @@
     SELECTED: 'selected',
     CSV_CONTENT: 'CSV_CONTENT',
     BUTTON_LABEL: 'BUTTON_LABEL',
-    FILE_NAME: 'FILE_NAME'
+    FILE_NAME: 'FILE_NAME',
+    PREVENT_FORMULAS_SINGLE_QUOTE: 'PREVENT_FORMULAS_SINGLE_QUOTE'
   });
 
   /**
@@ -608,6 +616,20 @@
           if ( gridOptions.exporterAllDataFn === null && gridOptions.exporterAllDataPromise ) {
             gridOptions.exporterAllDataFn = gridOptions.exporterAllDataPromise;
           }
+
+          /**
+           * @ngdoc object
+           * @name exporterPreventFormulaInjection
+           * @propertyOf  ui.grid.exporter.api:GridOptions
+           * @description Defaults to null to avoid breaking existing implementations. This will allow
+           * for csv formula injection. Turning this feature on will attempt to prevent injection attacks.
+           *
+           * @example
+           * <pre>
+           *   gridOptions.exporterPreventFormulaInjection = 'PREVENT_FORMULAS_SINGLE_QUOTE';
+           * </pre>
+           */
+          gridOptions.exporterPreventFormulaInjection = gridOptions.exporterPreventFormulaInjection ? gridOptions.exporterPreventFormulaInjection : gridOptions.exporterPreventFormulaInjection = null;
         },
 
 
@@ -737,7 +759,7 @@
           this.loadAllDataIfNeeded(grid, rowTypes, colTypes).then(function() {
             var exportColumnHeaders = grid.options.showHeader ? self.getColumnHeaders(grid, colTypes) : [];
             var exportData = self.getData(grid, rowTypes, colTypes);
-            var csvContent = self.formatAsCsv(exportColumnHeaders, exportData, grid.options.exporterCsvColumnSeparator);
+            var csvContent = self.formatAsCsv(exportColumnHeaders, exportData, grid.options.exporterCsvColumnSeparator, grid.options.preventFormulaInjection);
 
             self.downloadFile (grid.options.exporterCsvFilename, csvContent, grid.options.exporterCsvColumnSeparator, grid.options.exporterOlderExcelCompatibility, grid.options.exporterIsExcelCompatible);
           });
@@ -999,16 +1021,18 @@
          * @param {array} exportData an array of rows, where each row is
          * an array of column data
          * @param {string} separator a string that represents the separator to be used in the csv file
+         * @param {string} preventFormulaInjection a string that represents the strategy for preventing
+         * formula injection attacks
          * @returns {string} csv the formatted csv as a string
          */
-        formatAsCsv: function (exportColumnHeaders, exportData, separator) {
+        formatAsCsv: function (exportColumnHeaders, exportData, separator, preventFormulaInjection) {
           var self = this;
 
           var bareHeaders = exportColumnHeaders.map(function(header){return { value: header.displayName };});
 
-          var csv = bareHeaders.length > 0 ? (self.formatRowAsCsv(this, separator)(bareHeaders) + '\n') : '';
+          var csv = bareHeaders.length > 0 ? (self.formatRowAsCsv(this, separator, preventFormulaInjection)(bareHeaders) + '\n') : '';
 
-          csv += exportData.map(this.formatRowAsCsv(this, separator)).join('\n');
+          csv += exportData.map(this.formatRowAsCsv(this, separator, preventFormulaInjection)).join('\n');
 
           return csv;
         },
@@ -1021,11 +1045,15 @@
          * quotes around the value
          * @param {exporterService} exporter pass in exporter
          * @param {array} row the row to be turned into a csv string
+         * @param {string} preventFormulaInjection a string that represents the strategy for preventing
+         * formula injection attacks
          * @returns {string} a csv-ified version of the row
          */
-        formatRowAsCsv: function (exporter, separator) {
+        formatRowAsCsv: function (exporter, separator, preventFormulaInjection) {
           return function (row) {
-            return row.map(exporter.formatFieldAsCsv).join(separator);
+            return row.map(function(field){ return exporter.preventFormulaInjection(field, preventFormulaInjection); })
+              .map(exporter.formatFieldAsCsv)
+              .join(separator);
           };
         },
 
@@ -1056,6 +1084,29 @@
           return JSON.stringify(field.value);
         },
 
+        /**
+         * @ngdoc function
+         * @name preventFormulaInjection
+         * @methodOf  ui.grid.exporter.service:uiGridExporterService
+         * @description Applies selected formula injection preventative measures
+         * https://www.owasp.org/index.php/CSV_Injection
+         * @param {field} field the field to be turned into a csv string and checked for injection
+         * @param {string} preventFormulaInjection a string that represents the strategy for preventing
+         * formula injection attacks
+        */
+        preventFormulaInjection: function (field, preventFormulaInjection) {
+          // formula injection can only happen with strings
+          if (typeof(field.value) === 'string') {
+            if (preventFormulaInjection === 'PREVENT_FORMULAS_SINGLE_QUOTE') {
+              var match = field.value.search(/^[\=\+\-\@]/);
+              if (match !== -1) {
+                field.value = "\'" + field.value;
+                return field;
+              }
+            }
+          }
+          return field;
+        },
 
         /**
          * @ngdoc function

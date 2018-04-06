@@ -141,6 +141,7 @@ describe('ui.grid.exporter', function() {
           exporterPdfPageSize : 'A4',
           exporterPdfMaxGridWidth : 720,
           exporterPdfCustomFormatter: jasmine.any(Function),
+          exporterPreventFormulaInjection: null,
           exporterHeaderFilterUseName: false,
           exporterMenuAllData: true,
           exporterMenuVisibleData: true,
@@ -177,6 +178,7 @@ describe('ui.grid.exporter', function() {
           exporterPdfPageSize : 'LETTER',
           exporterPdfMaxGridWidth : 670,
           exporterPdfCustomFormatter: callback,
+          exporterPreventFormulaInjection: 'PREVENT_FORMULAS_SINGLE_QUOTE',
           exporterHeaderFilterUseName: true,
           exporterMenuAllData: false,
           exporterMenuVisibleData: false,
@@ -214,6 +216,7 @@ describe('ui.grid.exporter', function() {
           exporterPdfPageSize : 'LETTER',
           exporterPdfMaxGridWidth : 670,
           exporterPdfCustomFormatter: callback,
+          exporterPreventFormulaInjection: 'PREVENT_FORMULAS_SINGLE_QUOTE',
           exporterHeaderFilterUseName: true,
           exporterMenuAllData: false,
           exporterMenuVisibleData: false,
@@ -962,6 +965,46 @@ describe('ui.grid.exporter', function() {
 
         expect(uiGridExporterService.formatAsCsv(columnHeaders, data, separator)).toEqual(
           '"Col1";"Col2";"Col3";"12345234"\n"a string";"a string";"A string";"a string"\n"";"45";"A string";FALSE\n"' + date.toISOString() + '";45;"A string";TRUE'
+        );
+      });
+
+      it('formats a mix of data as a csv with formula injection prevention strategy set to off', function() {
+        var columnHeaders = [
+            {name: 'col1', displayName: 'Col1', width: 50, align: 'left'},
+            {name: 'col2', displayName: '=IMPORTXML("badbadbad")', width: '*', align: 'left'},
+            {name: 'col3', displayName: '@badness', width: 100, align: 'left'},
+            {name: 'x', displayName: '+evil', width: 200, align: 'left'}
+          ],
+          date = new Date(2014, 11, 12, 0, 0, 0, 0),
+          data = [
+            [ {value: '=calc|"badness"'}, {value: '@thebad'}, {value: 'A string'}, {value: 'a string'} ],
+            [ {value: ''}, {value: '45'}, {value: '+morebad'}, {value: false} ],
+            [ {value: date}, {value: 45}, {value: '-bad-ing'}, {value: true} ]
+          ],
+          separator = ';';
+
+        expect(uiGridExporterService.formatAsCsv(columnHeaders, data, separator)).toEqual(
+          '"Col1";"=IMPORTXML(""badbadbad"")";"@badness";"+evil"\n"=calc|""badness""";"@thebad";"A string";"a string"\n"";"45";"+morebad";FALSE\n"' + date.toISOString() + '";45;"-bad-ing";TRUE'
+        );
+      });
+
+      it('formats a mix of data as a csv with formula injection prevention strategy set to single quote', function() {
+        var columnHeaders = [
+            {name: 'col1', displayName: 'Col1', width: 50, align: 'left'},
+            {name: 'col2', displayName: '=IMPORTXML("badbadbad")', width: '*', align: 'left'},
+            {name: 'col3', displayName: '@badness', width: 100, align: 'left'},
+            {name: 'x', displayName: '+evil', width: 200, align: 'left'}
+          ],
+          date = new Date(2014, 11, 12, 0, 0, 0, 0),
+          data = [
+            [ {value: '=calc|"badness"'}, {value: '@thebad'}, {value: 'A string'}, {value: 'a string'} ],
+            [ {value: ''}, {value: '45'}, {value: '+morebad'}, {value: false} ],
+            [ {value: date}, {value: 45}, {value: '-bad-ing'}, {value: true} ]
+          ],
+          separator = ';';
+
+        expect(uiGridExporterService.formatAsCsv(columnHeaders, data, separator, 'PREVENT_FORMULAS_SINGLE_QUOTE')).toEqual(
+          '"Col1";"\'=IMPORTXML(""badbadbad"")";"\'@badness";"\'+evil"\n"\'=calc|""badness""";"\'@thebad";"A string";"a string"\n"";"45";"\'+morebad";FALSE\n"' + date.toISOString() + '";45;"\'-bad-ing";TRUE'
         );
       });
     });
