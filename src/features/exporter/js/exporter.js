@@ -1098,7 +1098,7 @@
           // formula injection can only happen with strings
           if (typeof(field.value) === 'string') {
             if (preventFormulaInjection === 'PREVENT_FORMULAS_SINGLE_QUOTE') {
-              var match = field.value.search(/^[\=\+\-\@]/);
+              var match = field.value.search(/^[-+=@]/);
               if (match !== -1) {
                 field.value = "\'" + field.value;
                 return field;
