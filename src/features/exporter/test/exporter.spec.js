@@ -178,7 +178,7 @@ describe('ui.grid.exporter', function() {
           exporterPdfPageSize : 'LETTER',
           exporterPdfMaxGridWidth : 670,
           exporterPdfCustomFormatter: callback,
-          exporterCsvInjectionStrategy: 'CSV_INJECTION_STRATEGY_PREFIX_SINGLE_QUOTE',
+          exporterCsvInjectionStrategy: uiGridExporterConstants.CSV_INJECTION_STRATEGY_PREFIX_SINGLE_QUOTE,
           exporterHeaderFilterUseName: true,
           exporterMenuAllData: false,
           exporterMenuVisibleData: false,
@@ -1003,7 +1003,7 @@ describe('ui.grid.exporter', function() {
           ],
           separator = ';';
 
-        expect(uiGridExporterService.formatAsCsv(columnHeaders, data, separator, 'CSV_INJECTION_STRATEGY_PREFIX_SINGLE_QUOTE')).toEqual(
+        expect(uiGridExporterService.formatAsCsv(columnHeaders, data, separator, uiGridExporterConstants.CSV_INJECTION_STRATEGY_PREFIX_SINGLE_QUOTE)).toEqual(
           '"Col1";"\'=IMPORTXML(""badbadbad"")";"\'@badness";"\'+evil"\n"\'=calc|""badness""";"\'@thebad";"A string";"a string"\n"";"45";"\'+morebad";FALSE\n"' + date.toISOString() + '";45;"\'-bad-ing";TRUE'
         );
       });

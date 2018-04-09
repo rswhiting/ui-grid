@@ -65,8 +65,9 @@ In this example we use the native grid menu buttons, and we show both the pdf an
   <file name="app.js">
     var app = angular.module('app', ['ngAnimate', 'ngTouch', 'ui.grid', 'ui.grid.selection', 'ui.grid.exporter']);
 
-    app.controller('MainCtrl', ['$scope', '$http', function ($scope, $http) {
+    app.controller('MainCtrl', ['$scope', '$http', 'uiGridExporterConstants', function ($scope, $http, uiGridExporterConstants) {
       $scope.gridOptions = {
+        exporterCsvInjectionStrategy: uiGridExporterConstants.CSV_INJECTION_STRATEGY_PREFIX_SINGLE_QUOTE,
         columnDefs: [
           { field: 'name' },
           { field: 'gender', visible: false},
